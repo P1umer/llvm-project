@@ -47,6 +47,10 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 
 #include <memory>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <fstream>
+#include <iostream>
 using namespace clang;
 using namespace llvm;
 
@@ -334,6 +338,57 @@ namespace clang {
       EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
                         LangOpts, C.getTargetInfo().getDataLayoutString(),
                         getModule(), Action, std::move(AsmOutStream));
+
+      // Emit the object file to custom defined path
+      if(Action == Backend_EmitObj){
+        static char *auto_storage_path = "/tmp/";
+        static bool auto_storage_enable = false;
+        // Get user-defined auto_storage_path
+        if(auto_storage_path=getenv("AUTO_COMPILE_STORAGE_PATH")) 
+          auto_storage_enable=true;
+        // Make sure the path exits
+        if(access(auto_storage_path, 0) == -1)	
+		      mkdir(auto_storage_path, S_IRWXU | S_IRWXG | S_IRWXO);	
+        // perform Backend_EmitObj once more 
+        // and emit the .obj files in the path above.
+        if(auto_storage_enable){
+          std::error_code EC;
+          std::unique_ptr<llvm::raw_fd_ostream> CustomOutStream;
+          std::string MainFileName = CodeGenOpts.MainFileName;
+          std::string CustomObjectFileName = "/"+MainFileName
+                                            .substr(0, MainFileName.find_last_of('.'))
+                                            .append(".o");
+          std::string CustomObjectFileFullPath = std::string(auto_storage_path).append("/") 
+                                                 .append(CustomObjectFileName);
+          
+                                            
+          CustomOutStream.reset(new llvm::raw_fd_ostream(CustomObjectFileFullPath, EC,        
+                                llvm::sys::fs::OF_None));
+                                
+          EmitBackendOutput(Diags, HeaderSearchOpts, CodeGenOpts, TargetOpts,
+                            LangOpts, C.getTargetInfo().getDataLayoutString(),
+                            getModule(), Action, std::move(CustomOutStream));
+
+          // Get the source file path
+          SourceManager &SourceMgr = Context->getSourceManager();
+          StringRef Filepath;
+          if (const FileEntry *FE = SourceMgr.getFileEntryForID(SourceMgr.getMainFileID())) {
+            Filepath = FE->tryGetRealPathName();
+            if (Filepath.empty())
+              Filepath = FE->getName();
+          }
+
+          // Map the .obj file to source file.
+          std::string Binary2SourceFilePath = std::string(auto_storage_path).append("/BIN2SRC");
+          std::ofstream b2s;
+          b2s.open(Binary2SourceFilePath,std::ios::app);
+          b2s << "[+] Source ##"
+              <<  Filepath.str() << "##, "
+              << "Object: ##"
+              << CustomObjectFileFullPath << "##\n";
+          b2s.close();
+        }
+      }
 
       Ctx.setDiagnosticHandler(std::move(OldDiagnosticHandler));
 
