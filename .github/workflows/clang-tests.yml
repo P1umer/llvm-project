@@ -3,7 +3,7 @@ name: Clang Tests
 on:
   push:
     branches:
-      - 'release/**'
+      - 'auto-compile-13.0.0'
     paths:
       - 'clang/**'
       - 'llvm/**'
