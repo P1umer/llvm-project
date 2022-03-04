@@ -533,9 +533,33 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
 //===----------------------------------------------------------------------===//
 // Deserialization (from args)
 //===----------------------------------------------------------------------===//
+typedef std::tuple<std::string, int, int> OptimizeLevel;
+#define OL(name, level, size) std::make_tuple(name, level ,size)
+
+const static std::set<OptimizeLevel> OptionTable{
+  OL("O0",    0, 0),
+  OL("O1",    1, 0),
+  OL("O2",    2, 0),
+  OL("O3",    3, 0),
+  OL("O4",    4, 0),
+  OL("Os",    2, 1),
+  OL("Oz",    2, 2),
+  OL("Og",    2, 0),
+  OL("Ofast", 3, 0),
+};
 
 static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
                                      DiagnosticsEngine &Diags) {
+  
+  static char *auto_opt = NULL;
+  if(auto_opt=getenv("AUTO_COMPILE_OPTION")){
+    for(auto level: OptionTable){
+      if(std::get<0>(level).compare(auto_opt)==0){
+        return std::get<1>(level);
+      }
+    }
+  }
+
   unsigned DefaultOpt = llvm::CodeGenOpt::None;
   if ((IK.getLanguage() == Language::OpenCL ||
        IK.getLanguage() == Language::OpenCLCXX) &&
@@ -565,6 +589,16 @@ static unsigned getOptimizationLevel(ArgList &Args, InputKind IK,
 }
 
 static unsigned getOptimizationLevelSize(ArgList &Args) {
+
+  static char *auto_opt = NULL;
+  if(auto_opt=getenv("AUTO_COMPILE_OPTION")){
+    for(auto level: OptionTable){
+      if(std::get<0>(level).compare(auto_opt)==0){
+        return std::get<2>(level);
+      }
+    }
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_O_Group)) {
     if (A->getOption().matches(options::OPT_O)) {
       switch (A->getValue()[0]) {
