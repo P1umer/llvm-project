@@ -1,3 +1,29 @@
+# Augment-Clang
+## About
+This tool is designed to assist in the construction of large binary datasets in binary research work, which will be suitable for the following purposes：
+
+1. Customize optimization level.
+1. Store the object files.
+1. Emit source to object path mapping
+
+## Usage
+Augment-clang is easy to use. There are just two environment variables you have to set.
+### 1. AUTO_COMPILE_OPTION
+The value of this variable will OVERWRITE the original optimization level. For example:
+```
+export AUTO_COMPILE_OPTION="O1"
+```
+Optional value: `["O0","O1","O2","O3","O4","Os","Oz","Ofast"]`.
+### 2. AUTO_COMPILE_STORAGE_PATH
+This environment variable should be set to the global path to the folder where object file copies will be stored.
+```
+export AUTO_COMPILE_STORAGE_PATH="/tmp/copys"
+```
+After the compilation is completed, an additional `BIN2SRC` file that stores the sourcecode to object file path mapping info will also be generated in this folder.
+### 3. Use Augment-Clang
+The last step you need to do is to replace the system installed `clang` with `Augment-Clang`.
+
+
 # The LLVM Compiler Infrastructure
 
 This directory and its sub-directories contain source code for LLVM,
